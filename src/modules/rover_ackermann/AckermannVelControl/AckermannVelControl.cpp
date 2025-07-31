@@ -132,8 +132,19 @@ void AckermannVelControl::updateSubscriptions()
 	if (_rover_velocity_setpoint_sub.updated()) {
 		rover_velocity_setpoint_s rover_velocity_setpoint;
 		_rover_velocity_setpoint_sub.copy(&rover_velocity_setpoint);
-		_speed_setpoint = rover_velocity_setpoint.speed;
-		_bearing_setpoint = rover_velocity_setpoint.bearing;
+		
+		// Check if bearing indicates backwards motion relative to vehicle
+		const float bearing_difference = matrix::wrap_pi(rover_velocity_setpoint.bearing - _vehicle_yaw);
+		
+		if (fabsf(bearing_difference) > M_PI_F/2.f) {
+			// Bearing points more backwards than forwards relative to rover
+			_speed_setpoint = -rover_velocity_setpoint.speed;  // Make negative (backwards)
+			_bearing_setpoint = matrix::wrap_pi(rover_velocity_setpoint.bearing + M_PI_F); // Flip bearing 180°
+		} else {
+			// Bearing points more forwards than backwards relative to rover  
+			_speed_setpoint = rover_velocity_setpoint.speed;   // Keep positive (forwards)
+			_bearing_setpoint = rover_velocity_setpoint.bearing; // Keep original bearing
+		}
 	}
 }
 
